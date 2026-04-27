@@ -1,0 +1,22 @@
+# Python cache — not needed inside container
+__pycache__/
+*.pyc
+*.pyo
+.pytest_cache/
+
+# Virtual environment — container installs its own packages
+venv/
+env/
+
+# Local secrets — never go inside the container
+.env
+
+# Git files — not needed inside container
+.git/
+.gitignore
+
+# Test files — not needed in production container
+test_app.py
+
+# Documentation
+*.md
