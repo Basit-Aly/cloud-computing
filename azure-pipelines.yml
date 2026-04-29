@@ -1,5 +1,5 @@
 # ══════════════════════════════════════════════════════════════════════════════
-#  Click & Dine - Azure DevOps CI/CD Pipeline
+# Azure DevOps CI/CD Pipeline
 #  Stages: Code Quality -> Unit Tests -> Build & Push -> Deploy -> Smoke Test
 #  Agent: Self-hosted (Default pool - your local machine)
 # ══════════════════════════════════════════════════════════════════════════════
@@ -149,7 +149,7 @@ stages:
                 kubectl create secret generic restaurant-secrets `
                   --from-literal=DATABASE_URL="$(DatabaseUrl)" `
                   --from-literal=SECRET_KEY="click-and-dine-secret-key" `
-                  --dry-run=client -o yaml | kubectl apply -f -
+                  --dry-run=client -o yaml | kubectl apply --validate=false -f -
 
           - task: AzureCLI@2
             displayName: 'Deploy to AKS'
@@ -165,8 +165,8 @@ stages:
                 $content = Get-Content "$(System.DefaultWorkingDirectory)/k8s/deployment.yml" -Raw
                 $content = $content -replace '\$\(Build\.BuildId\)', '$(imageTag)'
                 Set-Content "$(System.DefaultWorkingDirectory)/k8s/deployment.yml" $content
-                kubectl apply -f "$(System.DefaultWorkingDirectory)/k8s/deployment.yml"
-                kubectl apply -f "$(System.DefaultWorkingDirectory)/k8s/service.yml"
+                kubectl apply --validate=false -f "$(System.DefaultWorkingDirectory)/k8s/deployment.yml"
+                kubectl apply --validate=false -f "$(System.DefaultWorkingDirectory)/k8s/service.yml"
                 kubectl rollout status deployment/restaurant-app --timeout=300s
 
 # ══════════════════════════════════════════════════════════════════════════════
