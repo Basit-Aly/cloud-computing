@@ -1,6 +1,6 @@
 from flask import Flask, render_template, request, jsonify
 import pyodbc
-import os
+# import os
 from config import Config
 
 app = Flask(__name__)
