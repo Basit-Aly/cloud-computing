@@ -1,0 +1,235 @@
+# ══════════════════════════════════════════════════════════════════════════════
+#  Click & Dine - Azure DevOps CI/CD Pipeline
+#  Stages: Code Quality -> Unit Tests -> Build & Push -> Deploy -> Smoke Test
+# ══════════════════════════════════════════════════════════════════════════════
+
+# Trigger: run pipeline on every push to main branch
+trigger:
+  branches:
+    include:
+      - main
+
+# Pipeline-level variables
+variables:
+  acrName: 'restaurantacrbasit'
+  acrLoginServer: 'restaurantacrbasit.azurecr.io'
+  imageRepository: 'restaurant-app'
+  resourceGroup: 'restaurant-rg'
+  aksClusterName: 'restaurant-aks'
+  keyVaultName: 'restaurant-kv-basit'
+  azureServiceConnection: 'azure-service-connection'
+  imageTag: '$(Build.BuildId)'
+
+# ══════════════════════════════════════════════════════════════════════════════
+#  STAGE 1 - CODE QUALITY AND SECURITY
+# ══════════════════════════════════════════════════════════════════════════════
+stages:
+- stage: CodeQuality
+  displayName: 'Stage 1 - Code Quality and Security'
+  jobs:
+  - job: StaticAnalysis
+    displayName: 'Static Analysis and Security Scan'
+    pool:
+      vmImage: 'ubuntu-latest'
+    steps:
+
+    - task: UsePythonVersion@0
+      displayName: 'Use Python 3.11'
+      inputs:
+        versionSpec: '3.11'
+
+    - script: pip install -r requirements.txt
+      displayName: 'Install dependencies'
+
+    - script: flake8 app.py config.py --max-line-length=120
+      displayName: 'flake8 - Static Code Analysis'
+
+    - script: bandit -r app.py config.py -ll
+      displayName: 'bandit - Security Scan'
+
+    - script: safety check
+      displayName: 'safety - Dependency Vulnerability Check'
+      continueOnError: 'true'
+
+# ══════════════════════════════════════════════════════════════════════════════
+#  STAGE 2 - UNIT TESTS
+# ══════════════════════════════════════════════════════════════════════════════
+- stage: UnitTests
+  displayName: 'Stage 2 - Unit Tests'
+  dependsOn: CodeQuality
+  jobs:
+  - job: RunTests
+    displayName: 'Run pytest'
+    pool:
+      vmImage: 'ubuntu-latest'
+    steps:
+
+    - task: UsePythonVersion@0
+      displayName: 'Use Python 3.11'
+      inputs:
+        versionSpec: '3.11'
+
+    - script: pip install -r requirements.txt
+      displayName: 'Install dependencies'
+
+    - script: pytest test_app.py -v --junitxml=test-results.xml
+      displayName: 'Run unit tests'
+
+    - task: PublishTestResults@2
+      displayName: 'Publish test results'
+      condition: always()
+      inputs:
+        testResultsFormat: 'JUnit'
+        testResultsFiles: 'test-results.xml'
+        testRunTitle: 'Click and Dine Unit Tests'
+
+# ══════════════════════════════════════════════════════════════════════════════
+#  STAGE 3 - BUILD AND PUSH DOCKER IMAGE
+# ══════════════════════════════════════════════════════════════════════════════
+- stage: BuildAndPush
+  displayName: 'Stage 3 - Build and Push Docker Image'
+  dependsOn: UnitTests
+  jobs:
+  - job: DockerBuild
+    displayName: 'Docker Build and Push to ACR'
+    pool:
+      vmImage: 'ubuntu-latest'
+    steps:
+
+    - task: AzureCLI@2
+      displayName: 'Build and Push Docker image to ACR'
+      inputs:
+        azureSubscription: 'azure-service-connection'
+        scriptType: 'bash'
+        scriptLocation: 'inlineScript'
+        inlineScript: |
+          az acr login --name $(acrName)
+          docker build -t $(acrLoginServer)/$(imageRepository):$(imageTag) .
+          docker push $(acrLoginServer)/$(imageRepository):$(imageTag)
+          docker tag $(acrLoginServer)/$(imageRepository):$(imageTag) $(acrLoginServer)/$(imageRepository):latest
+          docker push $(acrLoginServer)/$(imageRepository):latest
+
+# ══════════════════════════════════════════════════════════════════════════════
+#  STAGE 4 - DEPLOY TO AKS
+# ══════════════════════════════════════════════════════════════════════════════
+- stage: Deploy
+  displayName: 'Stage 4 - Deploy to AKS'
+  dependsOn: BuildAndPush
+  jobs:
+  - deployment: DeployToAKS
+    displayName: 'Deploy to Azure Kubernetes Service'
+    pool:
+      vmImage: 'ubuntu-latest'
+    environment: 'production'
+    strategy:
+      runOnce:
+        deploy:
+          steps:
+
+          - checkout: self
+
+          - task: AzureCLI@2
+            displayName: 'Get AKS credentials'
+            inputs:
+              azureSubscription: 'azure-service-connection'
+              scriptType: 'bash'
+              scriptLocation: 'inlineScript'
+              inlineScript: |
+                az aks get-credentials \
+                  --resource-group $(resourceGroup) \
+                  --name $(aksClusterName) \
+                  --overwrite-existing
+
+          - task: AzureKeyVault@2
+            displayName: 'Fetch secrets from Key Vault'
+            inputs:
+              azureSubscription: 'azure-service-connection'
+              KeyVaultName: '$(keyVaultName)'
+              SecretsFilter: 'DatabaseUrl'
+              RunAsPreJob: false
+
+          - task: AzureCLI@2
+            displayName: 'Create Kubernetes secret'
+            inputs:
+              azureSubscription: 'azure-service-connection'
+              scriptType: 'bash'
+              scriptLocation: 'inlineScript'
+              inlineScript: |
+                az aks get-credentials \
+                  --resource-group $(resourceGroup) \
+                  --name $(aksClusterName) \
+                  --overwrite-existing
+                kubectl create secret generic restaurant-secrets \
+                  --from-literal=DATABASE_URL="$(DatabaseUrl)" \
+                  --from-literal=SECRET_KEY="click-and-dine-secret-key" \
+                  --dry-run=client -o yaml | kubectl apply -f -
+
+          - task: AzureCLI@2
+            displayName: 'Deploy to AKS'
+            inputs:
+              azureSubscription: 'azure-service-connection'
+              scriptType: 'bash'
+              scriptLocation: 'inlineScript'
+              inlineScript: |
+                az aks get-credentials \
+                  --resource-group $(resourceGroup) \
+                  --name $(aksClusterName) \
+                  --overwrite-existing
+                sed -i 's/$(Build.BuildId)/$(imageTag)/g' $(System.DefaultWorkingDirectory)/k8s/deployment.yml
+                kubectl apply -f $(System.DefaultWorkingDirectory)/k8s/deployment.yml
+                kubectl apply -f $(System.DefaultWorkingDirectory)/k8s/service.yml
+                kubectl rollout status deployment/restaurant-app --timeout=300s
+
+# ══════════════════════════════════════════════════════════════════════════════
+#  STAGE 5 - SMOKE TEST
+# ══════════════════════════════════════════════════════════════════════════════
+- stage: SmokeTest
+  displayName: 'Stage 5 - Smoke Test'
+  dependsOn: Deploy
+  jobs:
+  - job: HealthCheck
+    displayName: 'Health Check on Live App'
+    pool:
+      vmImage: 'ubuntu-latest'
+    steps:
+
+    - task: AzureCLI@2
+      displayName: 'Get public IP and run health check'
+      inputs:
+        azureSubscription: 'azure-service-connection'
+        scriptType: 'bash'
+        scriptLocation: 'inlineScript'
+        inlineScript: |
+          az aks get-credentials \
+            --resource-group $(resourceGroup) \
+            --name $(aksClusterName) \
+            --overwrite-existing
+
+          echo "Waiting for public IP..."
+          for i in {1..18}; do
+            PUBLIC_IP=$(kubectl get service restaurant-service \
+              -o jsonpath='{.status.loadBalancer.ingress[0].ip}' 2>/dev/null)
+            if [ -n "$PUBLIC_IP" ]; then
+              echo "Public IP assigned: $PUBLIC_IP"
+              break
+            fi
+            echo "Attempt $i: IP not ready yet, waiting 10 seconds..."
+            sleep 10
+          done
+
+          if [ -z "$PUBLIC_IP" ]; then
+            echo "ERROR: Could not get public IP after 3 minutes"
+            exit 1
+          fi
+
+          sleep 20
+
+          echo "Running health check on http://$PUBLIC_IP/health"
+          RESPONSE=$(curl -s -o /dev/null -w "%{http_code}" http://$PUBLIC_IP/health)
+
+          if [ "$RESPONSE" = "200" ]; then
+            echo "Smoke test PASSED - App is running at http://$PUBLIC_IP"
+          else
+            echo "Smoke test FAILED - Health check returned HTTP $RESPONSE"
+            exit 1
+          fi

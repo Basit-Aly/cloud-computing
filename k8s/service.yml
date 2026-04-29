@@ -1,0 +1,14 @@
+# ── Kubernetes Service ────────────────────────────────────────────────────────
+# Exposes our app to the internet via a public IP (Load Balancer)
+apiVersion: v1
+kind: Service
+metadata:
+  name: restaurant-service
+spec:
+  type: LoadBalancer            # Azure creates a public IP for this
+  selector:
+    app: restaurant-app         # routes traffic to our deployment
+  ports:
+  - protocol: TCP
+    port: 80                    # external port (users access on port 80)
+    targetPort: 5000            # internal port (Flask runs on 5000)

@@ -1,0 +1,43 @@
+# ── Kubernetes Deployment ─────────────────────────────────────────────────────
+# Tells Kubernetes how to run our Docker container
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: restaurant-app
+  labels:
+    app: restaurant-app
+spec:
+  replicas: 1                  # run one instance of our container
+  selector:
+    matchLabels:
+      app: restaurant-app
+  template:
+    metadata:
+      labels:
+        app: restaurant-app
+    spec:
+      containers:
+      - name: restaurant-app
+        image: restaurantacrbasit.azurecr.io/restaurant-app:$(Build.BuildId)
+        ports:
+        - containerPort: 5000
+        env:
+        - name: DATABASE_URL    # injected from Key Vault via pipeline
+          valueFrom:
+            secretKeyRef:
+              name: restaurant-secrets
+              key: DATABASE_URL
+        - name: SECRET_KEY
+          valueFrom:
+            secretKeyRef:
+              name: restaurant-secrets
+              key: SECRET_KEY
+        - name: FLASK_DEBUG
+          value: "false"
+        resources:
+          requests:
+            memory: "128Mi"
+            cpu: "100m"
+          limits:
+            memory: "256Mi"
+            cpu: "200m"
