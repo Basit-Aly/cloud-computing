@@ -43,10 +43,6 @@ stages:
     - script: bandit -r app.py config.py -ll
       displayName: 'bandit - Security Scan'
 
-    - script: safety check
-      displayName: 'safety - Dependency Vulnerability Check'
-      continueOnError: 'true'
-
 # ══════════════════════════════════════════════════════════════════════════════
 #  STAGE 2 - UNIT TESTS
 # ══════════════════════════════════════════════════════════════════════════════

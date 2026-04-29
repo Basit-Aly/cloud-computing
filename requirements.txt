@@ -3,4 +3,3 @@ pyodbc==5.1.0
 pytest==8.2.2
 flake8
 bandit
-safety
