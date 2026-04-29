@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
-  <title> Click & Dine — Reserve Your Table</title>
+  <title>Click & Dine — Reserve Your Table</title>
   <link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,300;0,400;1,300;1,400&family=Montserrat:wght@300;400;500&display=swap" rel="stylesheet"/>
   <style>
     /* ── Reset & Variables ───────────────────────────────────────────────── */
@@ -414,7 +414,7 @@
 <!-- ── Header ──────────────────────────────────────────────────────────── -->
 <header>
   <p class="header-ornament">Fine Dining Experience</p>
-  <h1>La <em>Maison</em></h1>
+  <h1>Click & <em>Dine</em></h1>
   <p>Reserve · Order · Arrive · Enjoy</p>
 </header>
 
@@ -548,7 +548,7 @@
           Confirm Reservation &amp; Pay
         </button>
         <p style="font-size:11px;color:var(--muted);margin-top:12px;text-align:center;">
-          Payment is simulated — no real charge will be made.
+          Payment is simulated in PKR — no real charge will be made.
         </p>
       </div>
     </div>
@@ -557,7 +557,7 @@
 
 <!-- ── Footer ──────────────────────────────────────────────────────────── -->
 <footer>
-  <p>La Maison &nbsp;·&nbsp; Restaurant Management System &nbsp;·&nbsp; CI/CD Demo Project</p>
+  <p>Click & Dine &nbsp;·&nbsp; Restaurant Management System &nbsp;·&nbsp; CI/CD Demo Project</p>
 </footer>
 
 <!-- ════════════════════════════════════════════════════════════════════════ -->
@@ -619,7 +619,7 @@
         card.innerHTML = `
           <p class="item-name">${dish.name}</p>
           <p class="item-desc">${dish.description}</p>
-          <p class="item-price">$${dish.price.toFixed(2)}</p>
+          <p class="item-price">Rs. ${dish.price.toFixed(0)}</p>
         `;
         card.onclick = () => toggleItem(dish);
         grid.appendChild(card);
@@ -668,12 +668,12 @@
       total += item.price * item.quantity;
       const row = document.createElement('div');
       row.className = 'summary-item';
-      row.innerHTML = `<span>${item.name}</span><span>$${item.price.toFixed(2)}</span>`;
+      row.innerHTML = `<span>${item.name}</span><span>Rs. ${item.price.toFixed(0)}</span>`;
       lines.appendChild(row);
     });
 
     totDiv.style.display = 'flex';
-    document.getElementById('total-price').textContent = `$${total.toFixed(2)}`;
+    document.getElementById('total-price').textContent = `Rs. ${total.toFixed(0)}`;
   }
 
   // ── Load available time slots for selected date ──────────────────────────
