@@ -1,6 +1,5 @@
 import os
 
-
 class Config:
     # Database connection string — loaded from environment variable.
     # Locally you set this in a .env file or your shell.

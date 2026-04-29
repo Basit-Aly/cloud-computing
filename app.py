@@ -121,6 +121,8 @@ def get_timeslots():
     ]
     return jsonify(slots), 200
 
-# debug=True in Flask exposes the Werkzeug debugger which allows anyone to execute arbitrary code on our server. Bandit flagged this as a High severity security issue
+
+# Bandit flagged debug=True as High severity security issue
+# It exposes Werkzeug debugger allowing arbitrary code execution
 if __name__ == "__main__":
     app.run(debug=False, host="0.0.0.0", port=5000)
