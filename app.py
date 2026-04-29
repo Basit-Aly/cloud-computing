@@ -1,6 +1,6 @@
 from flask import Flask, render_template, request, jsonify
 import pyodbc
-# import os    : flake8 found that we imported os but never used it. This is a code quality issue.
+# import os   flake8 found that we imported os but never used it. This is a code quality issue.
 from config import Config
 
 app = Flask(__name__)
@@ -121,8 +121,7 @@ def get_timeslots():
     ]
     return jsonify(slots), 200
 
-
-if __name__ == "__main__":
-    app.run(debug=False, host="0.0.0.0", port=5000)
 # debug=True in Flask exposes the Werkzeug debugger which allows anyone to execute arbitrary 
 # code on our server. Bandit flagged this as a High severity security issue
+if __name__ == "__main__":
+    app.run(debug=False, host="0.0.0.0", port=5000)
