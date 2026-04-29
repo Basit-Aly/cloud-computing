@@ -1,6 +1,6 @@
 from flask import Flask, render_template, request, jsonify
 import pyodbc
-# import os
+# import os    : flake8 found that we imported os but never used it. This is a code quality issue.
 from config import Config
 
 app = Flask(__name__)
@@ -123,4 +123,6 @@ def get_timeslots():
 
 
 if __name__ == "__main__":
-    app.run(debug=True, host="0.0.0.0", port=5000)
+    app.run(debug=False, host="0.0.0.0", port=5000)
+# debug=True in Flask exposes the Werkzeug debugger which allows anyone to execute arbitrary 
+# code on our server. Bandit flagged this as a High severity security issue
