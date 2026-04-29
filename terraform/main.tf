@@ -103,7 +103,18 @@ resource "azurerm_key_vault" "kv" {
       "Get", "List", "Set", "Delete", "Purge", "Recover"
     ]
   }
+
+    # Allow pipeline service connection to read secrets
+  access_policy {
+    tenant_id = data.azurerm_client_config.current.tenant_id
+    object_id = "ca9934d9-38b6-4d36-8fa4-4ad569f19b71"
+
+    secret_permissions = [
+      "Get", "List"
+    ]
+  }
 }
+
 
 # ── Store DB connection string in Key Vault ───────────────────────────────────
 resource "azurerm_key_vault_secret" "db_connection_string" {
