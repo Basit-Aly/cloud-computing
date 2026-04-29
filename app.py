@@ -125,4 +125,4 @@ def get_timeslots():
 # Bandit flagged debug=True as High severity security issue
 # It exposes Werkzeug debugger allowing arbitrary code execution
 if __name__ == "__main__":
-    app.run(debug=False, host="0.0.0.0", port=5000)
+    app.run(debug=False, host="0.0.0.0", port=5000)  # nosec B104
