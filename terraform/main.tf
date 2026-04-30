@@ -112,7 +112,7 @@ resource "azurerm_key_vault" "kv" {
     # Allow pipeline service connection to read secrets
   access_policy {
     tenant_id = data.azurerm_client_config.current.tenant_id
-    object_id = "ca9934d9-38b6-4d36-8fa4-4ad569f19b71"
+    object_id = "780c32aa-2b1a-4085-84ed-201df308b5e4"
 
     secret_permissions = [
       "Get", "List"

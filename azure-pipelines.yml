@@ -91,7 +91,11 @@ stages:
         scriptLocation: 'inlineScript'
         inlineScript: |
           az acr login --name $(acrName)
-          docker build -t $(acrLoginServer)/$(imageRepository):$(imageTag) .
+          az acr show --name $(acrName) --query "loginServer" -o tsv
+          docker build `
+            -t $(acrLoginServer)/$(imageRepository):$(imageTag) `
+            -f "$(Build.SourcesDirectory)/Dockerfile" `
+            "$(Build.SourcesDirectory)"
           docker push $(acrLoginServer)/$(imageRepository):$(imageTag)
           docker tag $(acrLoginServer)/$(imageRepository):$(imageTag) $(acrLoginServer)/$(imageRepository):latest
           docker push $(acrLoginServer)/$(imageRepository):latest
@@ -127,6 +131,18 @@ stages:
                   --name $(aksClusterName) `
                   --overwrite-existing
 
+          - task: AzureCLI@2
+            displayName: 'Grant AKS access to ACR'
+            inputs:
+              azureSubscription: 'azure-service-connection'
+              scriptType: 'ps'
+              scriptLocation: 'inlineScript'
+              inlineScript: |
+                az aks update `
+                  --name $(aksClusterName) `
+                  --resource-group $(resourceGroup) `
+                  --attach-acr $(acrName)
+
           - task: AzureKeyVault@2
             displayName: 'Fetch secrets from Key Vault'
             inputs:
@@ -152,6 +168,21 @@ stages:
                   --dry-run=client -o yaml | kubectl apply --validate=false -f -
 
           - task: AzureCLI@2
+            displayName: 'Clean up old deployment'
+            inputs:
+              azureSubscription: 'azure-service-connection'
+              scriptType: 'ps'
+              scriptLocation: 'inlineScript'
+              inlineScript: |
+                az aks get-credentials `
+                  --resource-group $(resourceGroup) `
+                  --name $(aksClusterName) `
+                  --overwrite-existing
+                kubectl delete deployment restaurant-app --ignore-not-found=true
+                kubectl delete service restaurant-service --ignore-not-found=true
+                Start-Sleep -Seconds 10
+
+          - task: AzureCLI@2
             displayName: 'Deploy to AKS'
             inputs:
               azureSubscription: 'azure-service-connection'
@@ -167,7 +198,7 @@ stages:
                 Set-Content "$(System.DefaultWorkingDirectory)/k8s/deployment.yml" $content
                 kubectl apply --validate=false -f "$(System.DefaultWorkingDirectory)/k8s/deployment.yml"
                 kubectl apply --validate=false -f "$(System.DefaultWorkingDirectory)/k8s/service.yml"
-                kubectl rollout status deployment/restaurant-app --timeout=300s
+                kubectl rollout status deployment/restaurant-app --timeout=600s
 
 # ══════════════════════════════════════════════════════════════════════════════
 #  STAGE 5 - SMOKE TEST
