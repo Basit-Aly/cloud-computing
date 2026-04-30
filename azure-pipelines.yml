@@ -127,14 +127,6 @@ stages:
                   --name $(aksClusterName) `
                   --overwrite-existing
 
-          - task: AzureKeyVault@2
-            displayName: 'Fetch secrets from Key Vault'
-            inputs:
-              azureSubscription: 'azure-service-connection'
-              KeyVaultName: '$(keyVaultName)'
-              SecretsFilter: 'DatabaseUrl'
-              RunAsPreJob: false
-
           - task: AzureCLI@2
             displayName: 'Create Kubernetes secret'
             inputs:
