@@ -1,29 +1,42 @@
-# ── Base image: official Python 3.11 slim (lightweight Linux) ────────────────
+# ── Base image: Python 3.11 ───────────────────────────────────────────────────
 FROM python:3.11-slim
 
-# ── Set working directory inside the container ────────────────────────────────
+# ── Set working directory ─────────────────────────────────────────────────────
 WORKDIR /app
 
-# ── Install system dependency required by pyodbc ─────────────────────────────
-# unixodbc-dev provides the ODBC headers needed to compile pyodbc on Linux
-RUN apt-get update && apt-get install -y \
-    unixodbc-dev \
-    gcc \
-    && rm -rf /var/lib/apt/lists/*
+# ── Install curl (needed to download Microsoft packages) ──────────────────────
+RUN apt-get update \
+    && apt-get install curl -y
+
+# ── Add Microsoft package signing key ────────────────────────────────────────
+RUN curl https://packages.microsoft.com/keys/microsoft.asc | apt-key add -
+
+# ── Add Microsoft SQL Server package repository ───────────────────────────────
+RUN curl https://packages.microsoft.com/config/debian/11/prod.list > /etc/apt/sources.list.d/mssql-release.list
+
+# ── Update package list with Microsoft repository ─────────────────────────────
+RUN apt-get update
+
+# ── Install Microsoft ODBC Driver 18 for SQL Server ──────────────────────────
+RUN ACCEPT_EULA=Y apt-get install -y msodbcsql18
+
+# ── Install Microsoft SQL Server tools ───────────────────────────────────────
+RUN ACCEPT_EULA=Y apt-get install -y mssql-tools18
+
+# ── Install unixODBC development headers ─────────────────────────────────────
+RUN apt-get install -y unixodbc-dev
 
 # ── Copy requirements first (allows Docker to cache this layer) ───────────────
-# If requirements.txt does not change, Docker skips reinstalling packages
 COPY requirements.txt .
 
 # ── Install Python dependencies ───────────────────────────────────────────────
-RUN pip install --no-cache-dir -r requirements.txt
+RUN pip install --no-cache-dir --timeout=300 --retries=5 -r requirements.txt
 
 # ── Copy the rest of the application code ────────────────────────────────────
 COPY . .
 
-# ── Expose the port Flask runs on ────────────────────────────────────────────
+# ── Expose Flask port ─────────────────────────────────────────────────────────
 EXPOSE 5000
 
-# ── Start the Flask application ───────────────────────────────────────────────
-# We use the flask command directly for production-safe startup
+# ── Start the application ─────────────────────────────────────────────────────
 CMD ["python", "app.py"]
