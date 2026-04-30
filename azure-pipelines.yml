@@ -90,11 +90,17 @@ stages:
         scriptType: 'ps'
         scriptLocation: 'inlineScript'
         inlineScript: |
-          az acr login --name $(acrName)
-          docker build --platform linux/arm64 -t $(acrLoginServer)/$(imageRepository):$(imageTag) .
-          docker push $(acrLoginServer)/$(imageRepository):$(imageTag)
-          docker tag $(acrLoginServer)/$(imageRepository):$(imageTag) $(acrLoginServer)/$(imageRepository):latest
-          docker push $(acrLoginServer)/$(imageRepository):latest
+          az acr build `
+            --registry $(acrName) `
+            --image $(imageRepository):$(imageTag) `
+            --platform linux/arm64 `
+            --file "$(Build.SourcesDirectory)/Dockerfile" `
+            "$(Build.SourcesDirectory)"
+          az acr import `
+            --name $(acrName) `
+            --source $(acrLoginServer)/$(imageRepository):$(imageTag) `
+            --image $(imageRepository):latest `
+            --force
 
 # ══════════════════════════════════════════════════════════════════════════════
 #  STAGE 4 - DEPLOY TO AKS
