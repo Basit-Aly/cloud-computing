@@ -91,7 +91,7 @@ stages:
         scriptLocation: 'inlineScript'
         inlineScript: |
           az acr login --name $(acrName)
-          docker build -t $(acrLoginServer)/$(imageRepository):$(imageTag) .
+          docker build --platform linux/amd64 -t $(acrLoginServer)/$(imageRepository):$(imageTag) .
           docker push $(acrLoginServer)/$(imageRepository):$(imageTag)
           docker tag $(acrLoginServer)/$(imageRepository):$(imageTag) $(acrLoginServer)/$(imageRepository):latest
           docker push $(acrLoginServer)/$(imageRepository):latest
