@@ -131,18 +131,6 @@ stages:
                   --name $(aksClusterName) `
                   --overwrite-existing
 
-          - task: AzureCLI@2
-            displayName: 'Grant AKS access to ACR'
-            inputs:
-              azureSubscription: 'azure-service-connection'
-              scriptType: 'ps'
-              scriptLocation: 'inlineScript'
-              inlineScript: |
-                az aks update `
-                  --name $(aksClusterName) `
-                  --resource-group $(resourceGroup) `
-                  --attach-acr $(acrName)
-
           - task: AzureKeyVault@2
             displayName: 'Fetch secrets from Key Vault'
             inputs:
