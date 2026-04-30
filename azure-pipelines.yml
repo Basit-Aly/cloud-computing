@@ -105,67 +105,28 @@ stages:
 # ══════════════════════════════════════════════════════════════════════════════
 #  STAGE 4 - DEPLOY TO AKS
 # ══════════════════════════════════════════════════════════════════════════════
-- stage: Deploy
-  displayName: 'Stage 4 - Deploy to AKS'
-  dependsOn: BuildAndPush
+- stage: BuildAndPush
+  displayName: 'Stage 3 - Build and Push Docker Image'
+  dependsOn: UnitTests
   jobs:
-  - deployment: DeployToAKS
-    displayName: 'Deploy to Azure Kubernetes Service'
+  - job: DockerBuild
+    displayName: 'Docker Build and Push to ACR'
     pool:
       name: 'Default'
-    environment: 'production'
-    strategy:
-      runOnce:
-        deploy:
-          steps:
+    steps:
 
-          - checkout: self
-
-          - task: AzureCLI@2
-            displayName: 'Get AKS credentials'
-            inputs:
-              azureSubscription: 'azure-service-connection'
-              scriptType: 'ps'
-              scriptLocation: 'inlineScript'
-              inlineScript: |
-                az aks get-credentials `
-                  --resource-group $(resourceGroup) `
-                  --name $(aksClusterName) `
-                  --overwrite-existing
-
-          - task: AzureCLI@2
-            displayName: 'Create Kubernetes secret'
-            inputs:
-              azureSubscription: 'azure-service-connection'
-              scriptType: 'ps'
-              scriptLocation: 'inlineScript'
-              inlineScript: |
-                az aks get-credentials `
-                  --resource-group $(resourceGroup) `
-                  --name $(aksClusterName) `
-                  --overwrite-existing
-                kubectl create secret generic restaurant-secrets `
-                  --from-literal=DATABASE_URL="$(DatabaseUrl)" `
-                  --from-literal=SECRET_KEY="click-and-dine-secret-key" `
-                  --dry-run=client -o yaml | kubectl apply --validate=false -f -
-
-          - task: AzureCLI@2
-            displayName: 'Deploy to AKS'
-            inputs:
-              azureSubscription: 'azure-service-connection'
-              scriptType: 'ps'
-              scriptLocation: 'inlineScript'
-              inlineScript: |
-                az aks get-credentials `
-                  --resource-group $(resourceGroup) `
-                  --name $(aksClusterName) `
-                  --overwrite-existing
-                $content = Get-Content "$(System.DefaultWorkingDirectory)/k8s/deployment.yml" -Raw
-                $content = $content -replace '\$\(Build\.BuildId\)', '$(imageTag)'
-                Set-Content "$(System.DefaultWorkingDirectory)/k8s/deployment.yml" $content
-                kubectl apply --validate=false -f "$(System.DefaultWorkingDirectory)/k8s/deployment.yml"
-                kubectl apply --validate=false -f "$(System.DefaultWorkingDirectory)/k8s/service.yml"
-                kubectl rollout status deployment/restaurant-app --timeout=300s
+    - task: AzureCLI@2
+      displayName: 'Build and Push Docker image to ACR'
+      inputs:
+        azureSubscription: 'azure-service-connection'
+        scriptType: 'ps'
+        scriptLocation: 'inlineScript'
+        inlineScript: |
+          az acr login --name $(acrName)
+          docker build -t $(acrLoginServer)/$(imageRepository):$(imageTag) .
+          docker push $(acrLoginServer)/$(imageRepository):$(imageTag)
+          docker tag $(acrLoginServer)/$(imageRepository):$(imageTag) $(acrLoginServer)/$(imageRepository):latest
+          docker push $(acrLoginServer)/$(imageRepository):latest
 
 # ══════════════════════════════════════════════════════════════════════════════
 #  STAGE 5 - SMOKE TEST

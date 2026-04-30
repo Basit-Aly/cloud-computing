@@ -44,7 +44,7 @@ resource "azurerm_kubernetes_cluster" "aks" {
   default_node_pool {
     name       = "default"
     node_count = 1
-    vm_size    = "Standard_B2ps_v2"
+    vm_size    = "Standard_B2als_v2"
   }
 
   # Use system-assigned managed identity (no service principal needed)
@@ -59,6 +59,11 @@ resource "azurerm_role_assignment" "aks_acr_pull" {
   role_definition_name             = "AcrPull"
   scope                            = azurerm_container_registry.acr.id
   skip_service_principal_aad_check = true
+
+  depends_on = [
+  azurerm_kubernetes_cluster.aks,
+  azurerm_container_registry.acr
+  ]
 }
 
 # ── Azure SQL Server ──────────────────────────────────────────────────────────
@@ -94,7 +99,7 @@ resource "azurerm_key_vault" "kv" {
   tenant_id           = data.azurerm_client_config.current.tenant_id
   sku_name            = "standard"
 
-  # Allow the current user (you) to manage secrets
+  # Allow the current user to manage secrets
   access_policy {
     tenant_id = data.azurerm_client_config.current.tenant_id
     object_id = data.azurerm_client_config.current.object_id
