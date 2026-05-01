@@ -22,33 +22,11 @@ variables:
   imageTag: '$(Build.BuildId)'
 
 # ══════════════════════════════════════════════════════════════════════════════
-#  STAGE 1 - CODE QUALITY AND SECURITY
+#  STAGE 1 - UNIT TESTS
 # ══════════════════════════════════════════════════════════════════════════════
 stages:
-- stage: CodeQuality
-  displayName: 'Stage 1 - Code Quality and Security'
-  jobs:
-  - job: StaticAnalysis
-    displayName: 'Static Analysis and Security Scan'
-    pool:
-      name: 'Default'
-    steps:
-
-    - script: pip install -r requirements.txt
-      displayName: 'Install dependencies'
-
-    - script: flake8 app.py config.py --max-line-length=120
-      displayName: 'flake8 - Static Code Analysis'
-
-    - script: bandit -r app.py config.py -ll
-      displayName: 'bandit - Security Scan'
-
-# ══════════════════════════════════════════════════════════════════════════════
-#  STAGE 2 - UNIT TESTS
-# ══════════════════════════════════════════════════════════════════════════════
 - stage: UnitTests
-  displayName: 'Stage 2 - Unit Tests'
-  dependsOn: CodeQuality
+  displayName: 'Stage 1 - Unit Tests'
   jobs:
   - job: RunTests
     displayName: 'Run pytest'
@@ -68,14 +46,37 @@ stages:
       inputs:
         testResultsFormat: 'JUnit'
         testResultsFiles: 'test-results.xml'
-        testRunTitle: 'Click and Dine Unit Tests'
+        testRunTitle: 'Unit Tests'
+
+# ══════════════════════════════════════════════════════════════════════════════
+#  STAGE 2 - CODE QUALITY AND SECURITY
+# ══════════════════════════════════════════════════════════════════════════════
+- stage: CodeQuality
+  displayName: 'Stage 2 - Code Quality and Security'
+  dependsOn: UnitTests
+  jobs:
+  - job: StaticAnalysis
+    displayName: 'Code Quality and Security Scan'
+    pool:
+      name: 'Default'
+    steps:
+
+    - script: pip install -r requirements.txt
+      displayName: 'Install dependencies'
+
+    - script: flake8 app.py config.py --max-line-length=120
+      displayName: 'flake8 - Static Code Analysis'
+
+    - script: bandit -r app.py config.py -ll
+      displayName: 'bandit - Security Scan'
+
 
 # ══════════════════════════════════════════════════════════════════════════════
 #  STAGE 3 - BUILD AND PUSH DOCKER IMAGE
 # ══════════════════════════════════════════════════════════════════════════════
 - stage: BuildAndPush
   displayName: 'Stage 3 - Build and Push Docker Image'
-  dependsOn: UnitTests
+  dependsOn: CodeQuality
   jobs:
   - job: DockerBuild
     displayName: 'Docker Build and Push to ACR'
@@ -189,10 +190,10 @@ stages:
                 kubectl rollout status deployment/restaurant-app --timeout=600s
 
 # ══════════════════════════════════════════════════════════════════════════════
-#  STAGE 5 - SMOKE TEST
+#  STAGE 5 - SMOKE TEST -- Health Check of Live app
 # ══════════════════════════════════════════════════════════════════════════════
 - stage: SmokeTest
-  displayName: 'Stage 5 - Smoke Test'
+  displayName: 'Stage 5 - Health Check of Live App'
   dependsOn: Deploy
   jobs:
   - job: HealthCheck
