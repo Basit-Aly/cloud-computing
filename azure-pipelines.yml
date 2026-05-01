@@ -93,10 +93,17 @@ stages:
         inlineScript: |
           az acr login --name $(acrName)
           az acr show --name $(acrName) --query "loginServer" -o tsv
-          docker build --no-cache `
+
+          # Pull existing image to use as cache
+          docker pull $(acrLoginServer)/$(imageRepository):latest 2>$null
+
+          # Removed --no-cache, added --cache-from
+          docker build `
+            --cache-from $(acrLoginServer)/$(imageRepository):latest `
             -t $(acrLoginServer)/$(imageRepository):$(imageTag) `
             -f "$(Build.SourcesDirectory)/Dockerfile" `
             "$(Build.SourcesDirectory)"
+
           docker push $(acrLoginServer)/$(imageRepository):$(imageTag)
           docker tag $(acrLoginServer)/$(imageRepository):$(imageTag) $(acrLoginServer)/$(imageRepository):latest
           docker push $(acrLoginServer)/$(imageRepository):latest
@@ -193,7 +200,7 @@ stages:
 #  STAGE 5 - SMOKE TEST -- Health Check of Live app
 # ══════════════════════════════════════════════════════════════════════════════
 - stage: SmokeTest
-  displayName: 'Stage 5 - Health Check of Live App'
+  displayName: 'Stage 5 - Health Check on Live App'
   dependsOn: Deploy
   jobs:
   - job: HealthCheck
