@@ -133,6 +133,7 @@ def about():
         "contact": "+92 300 0000000"
     }), 200
 
+
 # Bandit flagged debug=True as High severity security issue
 # It exposes Werkzeug debugger allowing arbitrary code execution
 if __name__ == "__main__":
