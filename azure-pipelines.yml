@@ -93,13 +93,7 @@ stages:
         inlineScript: |
           az acr login --name $(acrName)
           az acr show --name $(acrName) --query "loginServer" -o tsv
-
-          # Pull existing image to use as cache
-          docker pull $(acrLoginServer)/$(imageRepository):latest 2>$null
-
-          # Removed --no-cache, added --cache-from
           docker build `
-            --cache-from $(acrLoginServer)/$(imageRepository):latest `
             -t $(acrLoginServer)/$(imageRepository):$(imageTag) `
             -f "$(Build.SourcesDirectory)/Dockerfile" `
             "$(Build.SourcesDirectory)"
@@ -162,21 +156,6 @@ stages:
                   --from-literal=DATABASE_URL="$(DatabaseUrl)" `
                   --from-literal=SECRET_KEY="click-and-dine-secret-key" `
                   --dry-run=client -o yaml | kubectl apply --validate=false -f -
-
-          - task: AzureCLI@2
-            displayName: 'Clean up old deployment'
-            inputs:
-              azureSubscription: 'azure-service-connection'
-              scriptType: 'ps'
-              scriptLocation: 'inlineScript'
-              inlineScript: |
-                az aks get-credentials `
-                  --resource-group $(resourceGroup) `
-                  --name $(aksClusterName) `
-                  --overwrite-existing
-                kubectl delete deployment restaurant-app --ignore-not-found=true
-                kubectl delete service restaurant-service --ignore-not-found=true
-                Start-Sleep -Seconds 10
 
           - task: AzureCLI@2
             displayName: 'Deploy to AKS'

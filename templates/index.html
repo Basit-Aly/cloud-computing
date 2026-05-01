@@ -423,7 +423,6 @@
   <button class="active" onclick="showSection('menu')">Menu</button>
   <button onclick="showSection('timings')">Timings</button>
   <button onclick="showSection('booking')">Book a Table</button>
-  <button onclick="showSection('about')">About</button>
 </nav>
 
 <!-- ════════════════════════════════════════════════════════════════════════ -->
@@ -562,43 +561,6 @@
 </footer>
 
 <!-- ════════════════════════════════════════════════════════════════════════ -->
-<!--  ABOUT SECTION                                                          -->
-<!-- ════════════════════════════════════════════════════════════════════════ -->
-<section id="about">
-  <h2 class="section-title">About <em>Us</em></h2>
-  <p class="section-subtitle">Pakistan's first fully pre-ordered dining experience</p>
-
-  <div class="timings-info">
-    <div class="timing-card">
-      <p class="timing-session">Restaurant</p>
-      <p class="timing-hours">Click & Dine</p>
-      <p class="timing-note">Fine Dining Experience</p>
-    </div>
-    <div class="timing-card">
-      <p class="timing-session">Location</p>
-      <p class="timing-hours">Karachi</p>
-      <p class="timing-note">Pakistan</p>
-    </div>
-    <div class="timing-card">
-      <p class="timing-session">Contact</p>
-      <p class="timing-hours">+92 300 0000000</p>
-      <p class="timing-note">Call us anytime</p>
-    </div>
-    <div class="timing-card">
-      <p class="timing-session">Experience</p>
-      <p class="timing-hours">Since 2024</p>
-      <p class="timing-note">Serving with love</p>
-    </div>
-  </div>
-
-  <p style="font-size:12px; color:var(--muted); line-height:2;">
-    Click & Dine revolutionizes the dining experience in Pakistan. 
-    Book your table, select your meal and make payment — all before you arrive. 
-    Simply walk in and enjoy your meal without any waiting.
-  </p>
-</section>
-
-<!-- ════════════════════════════════════════════════════════════════════════ -->
 <!--  JAVASCRIPT                                                             -->
 <!-- ════════════════════════════════════════════════════════════════════════ -->
 <script>
@@ -608,11 +570,11 @@
   let allMenuItems  = [];   // full list from /api/menu
 
   // ── Tab navigation ───────────────────────────────────────────────────────
-  function showSection(id, btn) {
-      document.querySelectorAll('section').forEach(s => s.classList.remove('active'));
-      document.querySelectorAll('nav button').forEach(b => b.classList.remove('active'));
-      document.getElementById(id).classList.add('active');
-      btn.classList.add('active');
+  function showSection(id) {
+    document.querySelectorAll('section').forEach(s => s.classList.remove('active'));
+    document.querySelectorAll('nav button').forEach(b => b.classList.remove('active'));
+    document.getElementById(id).classList.add('active');
+    event.target.classList.add('active');
   }
 
   // ── Set minimum date to today ────────────────────────────────────────────
