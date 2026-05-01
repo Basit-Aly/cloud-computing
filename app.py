@@ -122,6 +122,17 @@ def get_timeslots():
     return jsonify(slots), 200
 
 
+# ── About page ───────────────────────────────────────────────────────────────
+@app.route("/about")
+def about():
+    return jsonify({
+        "restaurant": "Click & Dine",
+        "description": "Pakistan's first fully pre-ordered dining experience",
+        "location": "Karachi, Pakistan",
+        "timings": "Lunch 12:00-14:00 | Dinner 18:00-21:00",
+        "contact": "+92 300 0000000"
+    }), 200
+
 # Bandit flagged debug=True as High severity security issue
 # It exposes Werkzeug debugger allowing arbitrary code execution
 if __name__ == "__main__":
