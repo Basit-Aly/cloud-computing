@@ -1,37 +1,24 @@
-# ── Base image: Python 3.11 full image ───────────────────────────────────────
-# Using full image (not slim) because it includes apt-key and other tools
-# required to install Microsoft ODBC Driver 18 for SQL Server
-FROM python:3.11
+# ── Base image: Python 3.11 slim ──────────────────────────────────────────────
+FROM python:3.11-slim
 
 # ── Set working directory inside the container ────────────────────────────────
 WORKDIR /app
 
-# ── Install curl (needed to download Microsoft packages) ──────────────────────
-RUN apt-get update \
-    && apt-get install curl -y
-
-# ── Add Microsoft package signing key ────────────────────────────────────────
-# This tells apt to trust packages from Microsoft's repository
-RUN curl https://packages.microsoft.com/keys/microsoft.asc | apt-key add -
-
-# ── Add Microsoft SQL Server package repository ───────────────────────────────
-# This tells apt where to find Microsoft SQL Server packages
-RUN curl https://packages.microsoft.com/config/debian/11/prod.list > /etc/apt/sources.list.d/mssql-release.list
-
-# ── Update package list with Microsoft repository ─────────────────────────────
-RUN apt-get update
-
 # ── Install Microsoft ODBC Driver 18 for SQL Server ──────────────────────────
-# This is the actual driver pyodbc uses to connect to Azure SQL Database
-RUN ACCEPT_EULA=Y apt-get install -y msodbcsql18
-
-# ── Install Microsoft SQL Server command line tools ───────────────────────────
-# Includes sqlcmd and other SQL Server utilities
-RUN ACCEPT_EULA=Y apt-get install -y mssql-tools18
-
-# ── Install unixODBC development headers ─────────────────────────────────────
-# Required by pyodbc to compile and link against ODBC libraries
-RUN apt-get install -y unixodbc-dev
+# Step 1: Install curl, gnupg2 and apt-transport-https (needed to add Microsoft repo)
+# Step 2: Download Microsoft signing key and convert to gpg format
+# Step 3: Add Microsoft package repository
+# Step 4: Install msodbcsql18 (actual ODBC driver pyodbc needs)
+# Step 5: Install unixodbc-dev (ODBC development headers)
+# Step 6: Clean up to reduce image size
+RUN apt-get update && \
+    apt-get install -y curl gnupg2 apt-transport-https && \
+    curl -sSL https://packages.microsoft.com/keys/microsoft.asc | gpg --dearmor > /usr/share/keyrings/microsoft.gpg && \
+    echo "deb [arch=amd64 signed-by=/usr/share/keyrings/microsoft.gpg] https://packages.microsoft.com/debian/11/prod bullseye main" > /etc/apt/sources.list.d/mssql-release.list && \
+    apt-get update && \
+    ACCEPT_EULA=Y apt-get install -y msodbcsql18 unixodbc-dev && \
+    apt-get clean && \
+    rm -rf /var/lib/apt/lists/*
 
 # ── Copy requirements first (allows Docker to cache this layer) ───────────────
 # If requirements.txt does not change Docker skips reinstalling packages

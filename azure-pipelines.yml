@@ -92,7 +92,7 @@ stages:
         inlineScript: |
           az acr login --name $(acrName)
           az acr show --name $(acrName) --query "loginServer" -o tsv
-          docker build `
+          docker build --no-cache `
             -t $(acrLoginServer)/$(imageRepository):$(imageTag) `
             -f "$(Build.SourcesDirectory)/Dockerfile" `
             "$(Build.SourcesDirectory)"
