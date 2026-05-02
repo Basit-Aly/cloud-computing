@@ -66,3 +66,11 @@ def test_get_menu_returns_list(client):
         assert isinstance(data, list)
         assert len(data) == 2
         assert data[0]["name"] == "Grilled Chicken"
+
+
+# ── Test 6: About page returns correct information ───────────────────────────
+def test_about_page(client):
+    response = client.get("/about")
+    assert response.status_code == 200
+    data = json.loads(response.data)
+    assert data["restaurant"] == "Click & Dine"
