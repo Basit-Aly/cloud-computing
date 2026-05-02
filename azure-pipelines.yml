@@ -176,30 +176,55 @@ stages:
                 kubectl rollout status deployment/restaurant-app --timeout=600s
 
 # ══════════════════════════════════════════════════════════════════════════════
-#  STAGE 6 - MONITORING
+#  STAGE 5 - SMOKE TEST -- Health Check of Live app
 # ══════════════════════════════════════════════════════════════════════════════
-- stage: Monitoring
-  displayName: 'Stage 6 - Grafana Monitoring'
+- stage: SmokeTest
+  displayName: 'Stage 5 - Health Check on Live App'
   dependsOn: Deploy
   jobs:
-  - job: PrintGrafana
-    displayName: 'Print Grafana Dashboard URL'
+  - job: HealthCheck
+    displayName: 'Health Check on Live App'
     pool:
       name: 'Default'
     steps:
 
     - task: AzureCLI@2
-      displayName: 'Get Grafana Dashboard URL'
+      displayName: 'Get public IP and run health check'
       inputs:
         azureSubscription: 'azure-service-connection'
         scriptType: 'ps'
         scriptLocation: 'inlineScript'
         inlineScript: |
-          $url = az grafana show `
-            --name restaurant-grafana `
-            --resource-group restaurant-rg `
-            --query properties.endpoint -o tsv
+          az aks get-credentials `
+            --resource-group $(resourceGroup) `
+            --name $(aksClusterName) `
+            --overwrite-existing
 
-          Write-Host "##[section]════════════════════════════════════════════"
-          Write-Host "##[section]Grafana Dashboard: $url"
-          Write-Host "##[section]════════════════════════════════════════════"
+          Write-Host "Waiting for public IP..."
+          $publicIp = ""
+          for ($i = 1; $i -le 18; $i++) {
+            $publicIp = kubectl get service restaurant-service `
+              -o jsonpath='{.status.loadBalancer.ingress[0].ip}' 2>$null
+            if ($publicIp) {
+              Write-Host "Public IP assigned: $publicIp"
+              break
+            }
+            Write-Host "Attempt $i`: IP not ready yet, waiting 10 seconds..."
+            Start-Sleep -Seconds 10
+          }
+
+          if (-not $publicIp) {
+            Write-Host "ERROR: Could not get public IP after 3 minutes"
+            exit 1
+          }
+
+          Start-Sleep -Seconds 20
+
+          Write-Host "Running health check on http://$publicIp/health"
+          $response = Invoke-WebRequest -Uri "http://$publicIp/health" -UseBasicParsing
+          if ($response.StatusCode -eq 200) {
+            Write-Host "Smoke test PASSED - App is running at http://$publicIp"
+          } else {
+            Write-Host "Smoke test FAILED - Health check returned $($response.StatusCode)"
+            exit 1
+          }
